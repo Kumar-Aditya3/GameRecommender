@@ -2,7 +2,6 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from preprocessing import tag_encoding
 import pandas as pd
-import numpy as np
 def cosine_matrix():
     encoded_tags = tag_encoding()
     game_cosine = cosine_similarity(encoded_tags, encoded_tags)
@@ -35,7 +34,7 @@ def game_weights():
         weights.append(data["Rating"][i]-6)
     return weights
 
-def taste_vector(exclude_index = None):
+def taste_vector():
     tags = tag_encoding()
     weights = game_weights()
     encoded_weights = []
@@ -46,19 +45,3 @@ def taste_vector(exclude_index = None):
     weighted_array = np.sum(encoded_weights, axis = 0)
     return weighted_array
 
-def smoothed_score_vector(m=5, baseline = 0):
-    from preprocessing import filter_tags, preprocess_data
-    taste = taste_vector()
-    tags = filter_tags()
-    tag_counts,_ = preprocess_data()
-    tag_dict = {"Tags" : tags, "Weights" : taste}
-    df = pd.DataFrame(tag_dict)
-    df["Frequency"] = df["Tags"].map(tag_counts)
-    smoothed_array = []
-    for i in range(len(df)):
-        score = (df["Weights"].iloc[i]+(baseline*m))/(m + df["Frequency"].iloc[i])
-        smoothed_array.append(score)
-    return smoothed_array
-m = smoothed_scores(5)
-print(m)
-    

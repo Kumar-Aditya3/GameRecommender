@@ -4,42 +4,30 @@ TAG_ALIASES = {
     # RPG aliases
     "role playing": "rpg",
     "role playing game": "rpg",
-    "role-playing": "rpg",
-
     # Perspective
     "3rd person": "third person",
-    "3rd-person": "third person",
     "3rd person perspective": "third person",
-    "3rd-person perspective": "third person",
-    "first-person": "first person",
-
     # Shooter
     "fps": "first person shooter",
-    "third-person shooter": "third person shooter",
 
     # Multiplayer
     "online multiplayer": "multiplayer",
 
     # Co-op
-    "cooperative": "co-op",
-    "online co-op": "co-op",
+    "cooperative": "co op",
+    "online co op": "co op",
 
     # PvP
     "online pvp": "pvp",
 
-    # Formatting aliases
-    "action-adventure": "action adventure",
-    "free-to-play": "free to play",
-    "sci-fi": "sci fi",
-    "souls-like": "soulslike",
-    "post-apocalyptic": "post apocalyptic",
-    "fast-paced": "fast paced",
-    "team-based": "team based",
-    "turn-based": "turn based",
-    "party-based rpg": "party based rpg",
-    "real-time strategy": "real time strategy",
-    "steam-trading-cards": "steam trading cards",
 }
+
+unwanted_tags = [
+    "steam trading cards",
+    "steam achievements",
+    "full controller support",
+    "masterpiece"
+]
 
 def normalise_tag(word):
     new_word = word.lower().strip().replace("-", " ")
@@ -65,15 +53,11 @@ def preprocess_data():
                     tag_counts[tag] = 1
     return tag_counts, normalised_tags
 
-q,m = preprocess_data()
-sorted_genre = sorted(q.items(), key = lambda item: item[1], reverse =  True)
-
-
 def filter_tags():
     tag_counts, normalised_tags = preprocess_data()
     useful_tags= [
         tag for tag, count in tag_counts.items()
-        if count > 2
+        if count > 2 and tag not in unwanted_tags
     ]
     return useful_tags
 
@@ -116,11 +100,6 @@ def tag_encoding():
                 game_encoding.append(0)
         encodedgames.append(game_encoding)
     return encodedgames
-encoded_games = tag_encoding()
-
-print(len(encoded_games))
-print(len(encoded_games[2]))
-print(encoded_games[3])
 
 
 
