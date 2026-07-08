@@ -1,18 +1,19 @@
 TEST_MODE = False
-def savegame(info):
+def savegame(info, data):
     import csv
     import os
+
+    if data is not None:
+        existing_names = set(data["Name"].astype(str))
+        if info["Name"] in existing_names:
+            print("MATCH FOUND")
+            return
+
     info["Genres"] = "|".join(info["Genres"])
     info["Tags"] = "|".join(info["Tags"])
+    info["Developers"] = "|".join(info["Developers"])
+    fieldnames = ["Name", "Genres", "Tags", "Developers", "Description", "Rating"]
     file_exists = os.path.exists("games.csv")
-    if file_exists:
-        with open("games.csv","r",newline = "", encoding="utf-8") as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                if row["Name"] == info["Name"]:
-                    print("MATCH FOUND")
-                    return
-    fieldnames = ["Name", "Genres", "Tags","Rating"]
     with open("games.csv","a",newline = "", encoding="utf-8") as file:
         writer = csv.DictWriter(file, fieldnames = fieldnames)
         if file_exists == False:
@@ -56,6 +57,14 @@ def gamedata(game):
         genres = []
         tags = []
         g1 = data["results"][i] 
+        game_id = g1["id"]
+        detail_url = f"https://api.rawg.io/api/games/{game_id}"
+        detail_data = requests.get(detail_url, params={"key": api}).json()
+        description = detail_data.get("description_raw", "")
+        developers = []
+
+        for developer in detail_data.get("developers", []):
+            developers.append(developer["name"])
         for genre in g1["genres"]:
             genres.append(genre["name"])  
         for tag in g1["tags"]:
@@ -73,5 +82,13 @@ def gamedata(game):
                         break
                 except ValueError:
                     print("That is not a Number")
-        info = {"Name": data["results"][i]["name"], "Genres": genres, "Tags": tags, "Rating": rating}
+        info = {
+            "Name": data["results"][i]["name"],
+            "Genres": genres,
+            "Tags": tags,
+            "Developers": developers,
+            "Description": description,
+            "Rating": rating,
+        }
         return info
+

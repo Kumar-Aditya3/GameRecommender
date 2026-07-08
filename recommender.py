@@ -1,18 +1,18 @@
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-from preprocessing import tag_encoding
+from sklearn.linear_model import Ridge
+from preprocessing import *
 import pandas as pd
-import numpy as np
-def cosine_matrix():
-    encoded_tags = tag_encoding()
+from sklearn.linear_model import Ridge
+def cosine_matrix(data):
+    encoded_tags = tag_encoding(data)
     game_cosine = cosine_similarity(encoded_tags, encoded_tags)
     return game_cosine
 
-def get_gamesimilarity(name):
+def get_gamesimilarity(name, data):
     name = name.lower().strip().replace("-", " ")
     found = False
-    data = pd.read_csv("games.csv")     
-    matrix = cosine_matrix()
+    matrix = cosine_matrix(data)
     similarity_list = []
     for i in range(len(data)):
         if data["Name"][i].lower().strip().replace("-", " ") == name:
@@ -28,37 +28,82 @@ def get_gamesimilarity(name):
         sorted_list = sorted(similarity_list, key = lambda item: item[1], reverse = True)
         return sorted_list
 
-def game_weights():
-    data = pd.read_csv("games.csv")
+def game_weights(data):
     weights = []
     for i in range(len(data)):
         weights.append(data["Rating"][i]-6)
     return weights
 
-def taste_vector(exclude_index = None):
-    tags = tag_encoding()
-    weights = game_weights()
+def taste_vector(data, exclude_index = None):
+    tags = tag_encoding(data)
+    weights = game_weights(data)
     encoded_weights = []
     for i in range(len(tags)):
-        p = np.array(tags[i])
-        q = p*weights[i]
-        encoded_weights.append(q)
+        if i != exclude_index:
+            p = np.array(tags[i])
+            q = p*weights[i]
+            encoded_weights.append(q)
     weighted_array = np.sum(encoded_weights, axis = 0)
     return weighted_array
 
-def smoothed_score_vector(m=5, baseline = 0):
+def smoothed_score_vector(data, m=5, baseline=0, exclude_index=None):
     from preprocessing import filter_tags, preprocess_data
-    taste = taste_vector()
-    tags = filter_tags()
-    tag_counts,_ = preprocess_data()
-    tag_dict = {"Tags" : tags, "Weights" : taste}
+    taste = taste_vector(data, exclude_index=exclude_index)
+    tags = filter_tags(data)
+    tag_counts, _ = preprocess_data(data)
+    if exclude_index is not None:
+        excluded_tags = tag_encoding(data)[exclude_index]
+        for i in range(len(tags)):
+            tag = tags[i]
+            tag_counts[tag] = tag_counts[tag] - excluded_tags[i]
+    tag_dict = {
+        "Tags": tags,
+        "Weights": taste
+    }
     df = pd.DataFrame(tag_dict)
     df["Frequency"] = df["Tags"].map(tag_counts)
     smoothed_array = []
     for i in range(len(df)):
-        score = (df["Weights"].iloc[i]+(baseline*m))/(m + df["Frequency"].iloc[i])
+        score = (
+            df["Weights"].iloc[i] + (baseline * m)
+        ) / (m + df["Frequency"].iloc[i])
         smoothed_array.append(score)
     return smoothed_array
-m = smoothed_scores(5)
-print(m)
-    
+
+def leave_one_out_scores(data):
+    tags = tag_encoding(data)
+    scores = []
+
+    for i in range(len(tags)):
+        game_vector = tags[i]
+        tag_count = np.sum(game_vector)
+
+        if tag_count != 0:
+            p = np.array(
+                smoothed_score_vector(data, exclude_index=i)
+            ) * game_vector
+
+            q = np.sum(p) / tag_count
+        else:
+            q = np.nan
+
+        scores.append(q)
+
+    return scores
+
+
+def leave_one_out_ridge(X, y):
+    predictions = []
+    for i in range(len(X)):
+        mask = np.arange(len(X)) != i
+        X_train = X[mask]
+        y_train = y[mask]
+        X_test = X[i].reshape(1, -1)
+        model = Ridge(alpha=1.0)
+        model.fit(X_train, y_train)
+        prediction = model.predict(X_test)
+        p = prediction[0]
+        predictions.append(p)
+    return predictions
+
+
